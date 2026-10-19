@@ -79,20 +79,38 @@ GitHub Actions runs on every push and pull request:
 
 ### Selected Vulnerability
 
-*[To be filled after Vulhub setup: CVE-ID, description]*
+**CVE-2018-14574**: Django CommonMiddleware Open Redirect Vulnerability
+
+Django versions before 2.0.8 and 1.11.15 contain an open redirect vulnerability in `CommonMiddleware` when the `APPEND_SLASH` setting is enabled. A maliciously crafted URL starting with double slashes can redirect users to arbitrary external websites, enabling phishing attacks.
 
 ### Reproduction Steps
 
-*[To be filled: commands and screenshots]*
+1. Start the vulnerable Django environment using Docker Compose
+2. Visit the URL: `http://localhost:8000//www.example.com`
+3. The browser will automatically redirect to `www.example.com` (external site)
+
+*[Screenshot: Redirected to external example.com site]*
 
 ### Root Cause Analysis
 
-*[To be filled: explanation of the vulnerability]*
+The vulnerability exists in Django's `CommonMiddleware` which handles URL normalization and the `APPEND_SLASH` feature. When processing a path like `//www.example.com`, the middleware incorrectly treats the double-slash-prefixed path as a valid redirect target instead of a local path. Browsers interpret `//www.example.com` as a protocol-relative URL, causing the redirect to go to an external domain.
 
 ### Fix Applied
 
-*[To be filled: what was changed and why]*
+**Solution**: Upgrade Django from 2.0.7 to 2.0.8, which patches this vulnerability.
+
+The fix was implemented by creating a custom Dockerfile that installs Django 2.0.8 on top of the vulnerable base image:
+
+```dockerfile
+FROM vulhub/django:2.0.7
+RUN pip install django==2.0.8 --no-cache-dir
+```
 
 ### Fix Verification
 
-*[To be filled: proof that the attack no longer works]*
+After applying the fix:
+- Visiting `http://localhost:8001//www.example.com` no longer redirects to an external site
+- The double slashes are now treated as part of the local path (URL-encoded as `%2F`)
+- Normal functionality of the application remains intact
+
+*[Screenshot: Fixed environment no longer redirects to external site]*

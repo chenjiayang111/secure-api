@@ -30,13 +30,18 @@ jobs:
         run: |
           bandit -r . -f txt | tee bandit-report.txt
           bandit -r . -f json -o bandit-report.json
+          echo "## Bandit SAST report" >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
+          cat bandit-report.txt >> $GITHUB_STEP_SUMMARY
+          echo '```' >> $GITHUB_STEP_SUMMARY
 
       # SCA — 软件成分分析（依赖漏洞扫描，pip-audit 免费无需 API key）
       - name: Run pip-audit SCA scan
         run: |
+          pip-audit -r requirements.txt -f markdown -o sca-report.md || true
           pip-audit -r requirements.txt -f json -o sca-report.json || true
-          echo "===== SCA report (pip-audit) ====="
-          cat sca-report.json
+          echo "## pip-audit SCA report" >> $GITHUB_STEP_SUMMARY
+          cat sca-report.md >> $GITHUB_STEP_SUMMARY
 
       - name: Upload security reports
         if: always()
@@ -46,4 +51,5 @@ jobs:
           path: |
             bandit-report.txt
             bandit-report.json
+            sca-report.md
             sca-report.json

@@ -58,7 +58,7 @@ def token_required(f):
     @wraps(f)
     def decorated(*args, **kwargs):
         token = request.headers.get('Authorization', '').replace('Bearer ', '')
-        data = jwt.verify(token, SECRET_KEY)
+        data = decode_token(token)  # jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
         ...
 ```
 
@@ -69,7 +69,7 @@ def token_required(f):
 GitHub Actions runs on every push and pull request:
 
 - **SAST (Static Application Security Testing)**: Bandit — scans Python source code for security issues
-- **SCA (Software Composition Analysis)**: Safety — scans dependencies for known vulnerabilities
+- **SCA (Software Composition Analysis)**: pip-audit — scans dependencies for known vulnerabilities
 
 *[Screenshot: GitHub Actions successful run]*
 

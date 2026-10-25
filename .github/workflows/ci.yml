@@ -23,22 +23,27 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          pip install bandit safety
+          pip install bandit pip-audit
 
       # SAST — 静态应用安全测试
       - name: Run Bandit SAST scan
-        run: bandit -r app.py -f json -o bandit-report.json || true
-        continue-on-error: true
+        run: |
+          bandit -r . -f txt | tee bandit-report.txt
+          bandit -r . -f json -o bandit-report.json
 
-      # SCA — 软件成分分析（依赖漏洞扫描）
-      - name: Run Safety dependency scan
-        run: safety check --json --output safety-report.json || true
-        continue-on-error: true
+      # SCA — 软件成分分析（依赖漏洞扫描，pip-audit 免费无需 API key）
+      - name: Run pip-audit SCA scan
+        run: |
+          pip-audit -r requirements.txt -f json -o sca-report.json || true
+          echo "===== SCA report (pip-audit) ====="
+          cat sca-report.json
 
       - name: Upload security reports
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: security-reports
           path: |
+            bandit-report.txt
             bandit-report.json
-            safety-report.json
+            sca-report.json

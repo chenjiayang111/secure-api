@@ -133,4 +133,6 @@ with app.app_context():
     db.create_all()
 
 if __name__ == '__main__':
-    app.run(debug=True, port=5000)
+    # debug 模式仅通过环境变量开启（FLASK_DEBUG=1），生产/扫描默认关闭
+    debug_mode = os.environ.get('FLASK_DEBUG', '0') == '1'
+    app.run(debug=debug_mode, port=5000)

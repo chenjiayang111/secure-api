@@ -141,15 +141,29 @@ Django versions before 2.0.8 and 1.11.15 contain an open redirect vulnerability 
 
 ### Reproduction Steps
 
-1. Start the vulnerable Django environment using Docker Compose
-2. Visit the URL: `http://localhost:8000//www.example.com`
-3. The browser will automatically redirect to `www.example.com` (external site)
+1. Start the vulnerable Django environment using Docker Compose:
+   ```bash
+   cd vulhub/django/CVE-2018-14574
+   docker compose up -d
+   ```
+2. Confirm the open redirect with curl — the server responds with a redirect to an external site:
+   ```bash
+   curl -i http://localhost:8000//www.example.com
+   # HTTP/1.1 301 Moved Permanently
+# Location: //www.example.com/     <-- attacker-controlled external target
+   ```
+3. Visit the URL in a browser: `http://localhost:8000//www.example.com`
+4. The browser automatically redirects to the external site `www.example.com`
 
-*[Screenshot: Redirected to external example.com site]*
+![Open redirect exploited](screenshots/06_vuln_redirect.png)
+
+*Browser redirected from `localhost:8000//www.example.com` to the external site `www.example.com` (address bar)*
 
 ### Root Cause Analysis
 
 The vulnerability exists in Django's `CommonMiddleware` which handles URL normalization and the `APPEND_SLASH` feature. When processing a path like `//www.example.com`, the middleware incorrectly treats the double-slash-prefixed path as a valid redirect target instead of a local path. Browsers interpret `//www.example.com` as a protocol-relative URL, causing the redirect to go to an external domain.
+
+At the code level: in `django/middleware/common.py`, when `APPEND_SLASH` is enabled and the request 404s, `CommonMiddleware.process_response()` calls `should_redirect_with_slash()` → `get_full_path_with_slash()`, which builds the new URL and returns an `HttpResponsePermanentRedirect` — **without validating that the redirect target is same-origin**. Because the path starts with `//`, the Location header becomes `//www.example.com/`, which browsers resolve as `<scheme>://www.example.com/` (protocol-relative URL). The Django 2.0.8 / 1.11.15 patch added an `is_safe_url(url, allowed_hosts=...)` check (later `url_has_allowed_host_and_scheme`) before issuing the redirect, so a non-same-origin target is no longer redirected.
 
 ### Fix Applied
 
@@ -164,9 +178,17 @@ RUN pip install django==2.0.8 --no-cache-dir
 
 ### Fix Verification
 
-After applying the fix:
-- Visiting `http://localhost:8001//www.example.com` no longer redirects to an external site
-- The double slashes are now treated as part of the local path (URL-encoded as `%2F`)
-- Normal functionality of the application remains intact
+After applying the fix (`docker compose up --build -d` on port 8001):
 
-*[Screenshot: Fixed environment no longer redirects to external site]*
+- Visiting `http://localhost:8001//www.example.com` no longer redirects to an external site
+- The double slashes are now treated as part of the local path (URL-encoded as `%2F`):
+  ```bash
+  curl -i http://localhost:8001//www.example.com
+  # HTTP/1.1 301 Moved Permanently
+  # Location: /%2Fwww.example.com/   <-- stays on localhost, external redirect blocked
+  ```
+- Regression test: the application home page still returns `200 OK`
+
+![Fix verified](screenshots/07_fix_no_redirect.png)
+
+*After the fix, the same URL stays on `localhost:8001` and serves the normal page — no external redirect*

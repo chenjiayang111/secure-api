@@ -71,7 +71,63 @@ GitHub Actions runs on every push and pull request:
 - **SAST (Static Application Security Testing)**: Bandit — scans Python source code for security issues
 - **SCA (Software Composition Analysis)**: pip-audit — scans dependencies for known vulnerabilities
 
-*[Screenshot: GitHub Actions successful run]*
+### CI Runs (GitHub Actions)
+
+All checks run automatically on every push and pull request. Latest successful run: https://github.com/chenjiayang111/secure-api/actions/runs/40188327091
+
+![Security CI workflow runs](screenshots/01_ci_all_runs.png)
+
+*Security CI pipeline — all runs passing (Bandit SAST + pip-audit SCA)*
+
+![CI job steps](screenshots/03_ci_logs.png)
+
+*Job steps — "Run Bandit SAST scan" and "Run pip-audit SCA scan" both passed*
+
+![Run detail with artifacts](screenshots/05_ci_summary_reports.png)
+
+*Run detail — Success, security-reports artifact uploaded*
+
+![Bandit SAST report](screenshots/04_bandit_report.png)
+
+*Bandit SAST report — no security issues identified*
+
+---
+
+## API Testing (curl)
+
+```bash
+# 1. Register a user
+curl -X POST http://127.0.0.1:5000/auth/register \
+     -H "Content-Type: application/json" \
+     -d '{"username":"alice","password":"Pass123!"}'
+# -> {"message":"User created","user_id":1}
+
+# 2. Login and receive JWT
+curl -X POST http://127.0.0.1:5000/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"username":"alice","password":"Pass123!"}'
+# -> {"token":"eyJhbGciOi..."}
+
+# 3. Access protected data WITHOUT token -> denied (401)
+curl http://127.0.0.1:5000/api/data
+# -> {"error":"Token is missing"}
+
+# 4. Access protected data WITH token
+curl http://127.0.0.1:5000/api/data -H "Authorization: Bearer <TOKEN>"
+
+# 5. SQL injection attempt -> blocked (401)
+curl -X POST http://127.0.0.1:5000/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{"username":"alice'"'"' OR 1=1 --","password":"anything"}'
+# -> {"error":"Invalid username or password"}
+
+# 6. Create a post with an XSS payload -> escaped on output
+curl -X POST http://127.0.0.1:5000/api/posts \
+     -H "Content-Type: application/json" -H "Authorization: Bearer <TOKEN>" \
+     -d '{"title":"<script>alert(1)</script>","content":"<img src=x onerror=alert(2)>"}'
+curl http://127.0.0.1:5000/api/data -H "Authorization: Bearer <TOKEN>"
+# -> title: "&lt;script&gt;alert(1)&lt;/script&gt;"  (escaped)
+```
 
 ---
 

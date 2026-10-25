@@ -38,8 +38,8 @@ jobs:
       # SCA — 软件成分分析（依赖漏洞扫描，pip-audit 免费无需 API key）
       - name: Run pip-audit SCA scan
         run: |
-          pip-audit -r requirements.txt -f markdown -o sca-report.md || true
-          pip-audit -r requirements.txt -f json -o sca-report.json || true
+          pip-audit -r requirements.txt -f markdown 2>/dev/null | tee sca-report.md || true
+          pip-audit -r requirements.txt -f json 2>/dev/null | tee sca-report.json || true
           echo "## pip-audit SCA report" >> $GITHUB_STEP_SUMMARY
           cat sca-report.md >> $GITHUB_STEP_SUMMARY
 

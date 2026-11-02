@@ -73,7 +73,7 @@ GitHub Actions runs on every push and pull request:
 
 ### CI Runs (GitHub Actions)
 
-All checks run automatically on every push and pull request. Latest successful run: https://github.com/chenjiayang111/secure-api/actions/runs/40188327091
+All checks run automatically on every push and pull request. Latest successful run: https://github.com/chenjiayang111/secure-api/actions/runs/40443424544
 
 ![Security CI workflow runs](screenshots/01_ci_all_runs.png)
 
